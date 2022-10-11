@@ -1,0 +1,157 @@
+1 web服务器总体介绍:
+	使用浏览器作为客户端访问web服务器;
+	
+  使用到的知识总结:
+  	socket编程:
+  		socket setsockopt bind listen read write send recv close
+ 	编写网络服务器常用的模型有哪些:
+ 		多进程版本,
+ 		多线程版本
+ 		多路IO复用:select poll epoll
+ 		第三方库: libevent
+ 	TCP/IP四层模型:
+ 		应用层--->传输层---->网络层---->数据链路层
+ 	本次案例所使用的协议:
+ 		TCP+http协议
+ 	
+ 	熟悉掌握http协议的请求和应答协议.
+ 	
+ 	了解html文件的编写
+ 	
+ 	TCP协议重在数据的传输, 而http协议重在数据的解释
+ 	
+ 	
+http协议请求报文格式:
+	1 请求行  GET /test.txt HTTP/1.1
+	2 请求行  健值对
+	3 空行  \r\n
+	4 数据 
+	
+http协议响应消息格式:
+	1 状态行  200 表示成功, 404 表示请求的资源不存在
+	2 消息报头 健值对
+	3 空行 \r\n
+	4 响应正文
+	
+
+选择使用epoll模型作为web服务器:
+1 创建socket
+2 设置端口复用
+3 绑定
+4 监听
+5 创建epoll树
+6 将监听文件描述符上epoll树
+7 while(1)
+  {
+  	nready = epoll_wait();
+  	if(nready<0)
+  	{
+  	
+  	}
+  	
+  	for(i=0; i<nready; i++)
+  	{
+	  	//若是有新的客户端连接到来,则接受新的客户端连接, 然后上epoll树
+	  	if(lfd==events[i].data.fd)
+	  	{
+	  		cfd = accept();
+	  		epoll_ctl(epfd, cfd, EPOLL_CTL_ADD, &ev);
+	  	}
+	  	else
+	  	{ 	
+	  		http_request(cfd);
+	  	}
+  	}
+  	
+  }	
+  
+ //处理客户端的请求
+ int http_request(int cfd)
+ {
+ 	//读取数据
+ 	//先读取一行, 可以获得浏览器想请求的文件
+ 	//然后循环将剩余的数据读完
+ 	
+ 	//查看本地是否有这个文件
+ 		---若没有这个文件, 则组织应答信息并且将404.jpg文件内容发送给浏览器
+ 		---若有个这个文件, 则判断文件类型
+ 			----若是普通文件, 则组织应答消息并且将文件内容发送给浏览器
+ 			----若是目录, 则组织应答消息, 响应正文部分将目录下的所有文件组织
+ 			成文件列表的形式生成html文件(每个文件都是一个超连接), 然后发送给浏览器 
+ }
+	
+	
+read函数读通信文件描述符是阻塞的, 所以在while中循环读的时候若读完数据了会引起阻塞;
+所以应该将通信文件描述符设置为非阻塞.
+
+char *path = getenv("HOME");
+
+遍历目录的函数:
+1 opendir readdir closedir
+2
+	int scandir(const char *dirp, struct dirent ***namelist,
+                int (*filter)(const struct dirent *),
+                int (*compar)(const struct dirent **, const struct dirent **));
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+int main(void)
+{
+   struct dirent **namelist;
+   int n;
+
+   n = scandir(".", &namelist, NULL, alphasort);
+   if (n < 0)
+       perror("scandir");
+   else {
+       while (n--) {
+           printf("%s\n", namelist[n]->d_name);
+           free(namelist[n]);
+       }
+       free(namelist);
+   }
+}
+
+
+<html><head><title>Index of ./</title></head>
+<body bgcolor="#99cc99"><h4>Index of ./</h4>
+<ul type=circle>
+	<--文件列表部分-->
+	<li>
+		<a href=filename>filename</a>
+	</li>
+</ul>
+<address><a href="http://www.itcast.com/">xhttpd</a></address>
+</body></html>
+
+SIGPIPE信号的产生: 若服务端传输数据的时候, 浏览器连接关闭, 此时由于是正在写一个
+没有读端的连接, 此时内核会给web服务端发送SIGPIPE信号.
+
+
+%E8%8B%A6%E7%93%9C.txt
+ e8 8b a6 e7 93 9c
+ 
+ e8---->e8
+ 
+'A'--->10
+'A'-'A'+10
+'C'- 'A'+10 = 12
+ 
+ ('e' - 'a' + 10)*16 + ('8'-'0')
+ 
+公式为c: r
+if(c>='0' && c<='9')
+{
+	r = c-'0';
+}
+else if(c>='A' && c<='F')
+{
+	r = c-'A' + 10;
+}
+else ifif(c>='a' && c<='f')
+{
+	r = c-'a' + 10;
+}
+ 
+ff--->15*16+15=255
